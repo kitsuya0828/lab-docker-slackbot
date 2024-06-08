@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package stat;
+
+option go_package = "github.com/Kitsuya0828/lab-docker-slackbot/proto/stat";
+
+message DockerStat {
+	message Item {
+		uint64 active = 1;
+		float size = 2;
+		float reclaimable = 3;
+    		uint64 total_count = 4;
+	}
+	Item images = 1;
+	Item containers = 2;
+	Item local_volumes = 3;
+	Item build_cache = 4;
+}
+
+message GetDockerStatRequest {
+}
+
+message GetDockerStatResponse {
+	DockerStat docker_stat = 1;
+}
+
+message FsStat {
+	uint64 total = 1;
+	uint64 free = 2;
+	uint64 used = 3;
+}
+
+message GetFsStatRequest {
+}
+
+message GetFsStatResponse {
+	FsStat fs_stat = 1;
+}
+
+service StatService {
+	rpc GetDockerStat(GetDockerStatRequest) returns (GetDockerStatResponse);
+	rpc GetFsStat(GetFsStatRequest) returns (GetFsStatResponse);
+}
