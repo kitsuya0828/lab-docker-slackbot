@@ -2,3 +2,5 @@
 .DS_Store
 
 client/config.yaml
+
+bin/
