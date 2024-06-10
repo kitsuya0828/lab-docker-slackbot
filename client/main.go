@@ -1,40 +1,58 @@
 package main
 
 import (
-	"context"
 	"flag"
-	"log"
-	"time"
+	"log/slog"
+	"os"
 
-	pb "github.com/Kitsuya0828/lab-docker-slackbot/proto/stat"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	drivers "github.com/Kitsuya0828/lab-docker-slackbot/driver"
+	"gopkg.in/yaml.v3"
+
+	"github.com/joho/godotenv"
+	"github.com/slack-go/slack/slackevents"
+	"github.com/slack-go/slack/socketmode"
 )
 
 var (
-	addr = flag.String("addr", "localhost:50051", "the address to connect to")
+	envFile    = flag.String("env", ".env", "path to .env file")
+	configFile = flag.String("config", "config.yaml", "path to config file")
+
+	cfg *config
 )
+
+type Host struct {
+	Address string `yaml:"address"`
+	Port    string `yaml:"port"`
+}
+
+type config struct {
+	Hosts []Host `yaml:"hosts"`
+}
 
 func main() {
 	flag.Parse()
-	conn, err := grpc.NewClient(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+	if err := godotenv.Load(*envFile); err != nil {
+		slog.Error("failed to load .env file", "error", err)
 	}
-	defer conn.Close()
-	c := pb.NewStatServiceClient(conn)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	r1, err := c.GetFsStat(ctx, &pb.GetFsStatRequest{})
+	b, err := os.ReadFile(*configFile)
 	if err != nil {
-		log.Fatalf("could not greet: %v", err)
+		slog.Error("failed to read config file", "error", err)
 	}
-	log.Printf("Filesystem stats: %s", r1.String())
+	cfg = &config{}
+	if err := yaml.Unmarshal(b, cfg); err != nil {
+		slog.Error("failed to unmarshal yaml", "error", err)
+	}
 
-	r2, err := c.GetDockerStat(ctx, &pb.GetDockerStatRequest{})
+	client, err := drivers.ConnectToSlackViaSocketmode()
 	if err != nil {
-		log.Fatalf("could not greet: %v", err)
+		slog.Error("failed to connect to slack", "error", err)
+		os.Exit(1)
 	}
-	log.Printf("Docker stats: %s", r2.String())
+
+	socketmodeHandler := socketmode.NewSocketmodeHandler(client)
+
+	socketmodeHandler.HandleEvents(slackevents.AppHomeOpened, middlewareAppHomeOpened)
+
+	socketmodeHandler.RunEventLoop()
 }

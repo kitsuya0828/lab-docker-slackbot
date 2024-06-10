@@ -22,6 +22,7 @@ message GetDockerStatRequest {
 
 message GetDockerStatResponse {
 	DockerStat docker_stat = 1;
+	string hostname = 2;
 }
 
 message FsStat {
@@ -35,6 +36,8 @@ message GetFsStatRequest {
 
 message GetFsStatResponse {
 	FsStat fs_stat = 1;
+	string hostname = 2;
+	string path = 3;
 }
 
 service StatService {

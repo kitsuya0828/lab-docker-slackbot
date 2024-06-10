@@ -4,8 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
+	"os"
+	"sync"
 
 	"github.com/Kitsuya0828/lab-docker-slackbot/disk"
 	"github.com/Kitsuya0828/lab-docker-slackbot/docker"
@@ -15,15 +17,20 @@ import (
 
 var (
 	port = flag.Int("port", 50051, "The server port")
+	path = flag.String("path", "/", "The path to get disk usage")
 )
 
 type server struct {
 	pb.StatServiceServer
+	mu sync.Mutex
 }
 
 func (s *server) GetFsStat(ctx context.Context, in *pb.GetFsStatRequest) (*pb.GetFsStatResponse, error) {
-	log.Printf("Received: %v", in.String())
-	du, err := disk.GetDiskUsage("/")
+	du, err := disk.GetDiskUsage(*path)
+	if err != nil {
+		return nil, err
+	}
+	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, err
 	}
@@ -33,19 +40,31 @@ func (s *server) GetFsStat(ctx context.Context, in *pb.GetFsStatRequest) (*pb.Ge
 			Used:  du.Used,
 			Free:  du.Free,
 		},
+		Path:     *path,
+		Hostname: hostname,
 	}, nil
 }
 
 func (s *server) GetDockerStat(ctx context.Context, in *pb.GetDockerStatRequest) (*pb.GetDockerStatResponse, error) {
-	log.Printf("Received: %v", in.String())
 	cli, err := docker.NewClient()
 	if err != nil {
 		return nil, err
 	}
+	defer cli.Close()
+
+	// To avoid "rpc error: code = Unknown desc = Error response from daemon: a disk usage operation is already running"
+	s.mu.Lock()
 	du, err := docker.GetDiskUsage(context.Background(), cli)
 	if err != nil {
 		return nil, err
 	}
+	s.mu.Unlock()
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
 	return &pb.GetDockerStatResponse{
 		DockerStat: &pb.DockerStat{
 			Images: &pb.DockerStat_Item{
@@ -73,6 +92,7 @@ func (s *server) GetDockerStat(ctx context.Context, in *pb.GetDockerStatRequest)
 				TotalCount:  du.BuildCache.TotalCount,
 			},
 		},
+		Hostname: hostname,
 	}, nil
 }
 
@@ -80,12 +100,14 @@ func main() {
 	flag.Parse()
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		slog.Error("failed to listen", "error", err, "port", *port)
+		os.Exit(1)
 	}
 	s := grpc.NewServer()
 	pb.RegisterStatServiceServer(s, &server{})
-	log.Printf("server listening at %v", lis.Addr())
+	slog.Info("server listening", "port", *port)
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		slog.Error("failed to serve", "error", err)
+		os.Exit(1)
 	}
 }
