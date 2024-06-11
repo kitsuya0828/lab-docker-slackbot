@@ -1,4 +1,4 @@
-package disk
+package fs
 
 import (
 	"github.com/shirou/gopsutil/v4/disk"

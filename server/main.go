@@ -9,9 +9,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/Kitsuya0828/lab-docker-slackbot/disk"
-	"github.com/Kitsuya0828/lab-docker-slackbot/docker"
 	pb "github.com/Kitsuya0828/lab-docker-slackbot/proto/stat"
+	"github.com/Kitsuya0828/lab-docker-slackbot/server/docker"
+	"github.com/Kitsuya0828/lab-docker-slackbot/server/fs"
 	"google.golang.org/grpc"
 )
 
@@ -26,7 +26,7 @@ type server struct {
 }
 
 func (s *server) GetFsStat(ctx context.Context, in *pb.GetFsStatRequest) (*pb.GetFsStatResponse, error) {
-	du, err := disk.GetDiskUsage(*path)
+	du, err := fs.GetDiskUsage(*path)
 	if err != nil {
 		return nil, err
 	}
