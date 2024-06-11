@@ -53,6 +53,7 @@ func main() {
 	socketmodeHandler := socketmode.NewSocketmodeHandler(client)
 
 	socketmodeHandler.HandleEvents(slackevents.AppHomeOpened, middlewareAppHomeOpened)
+	socketmodeHandler.HandleEvents(slackevents.AppMention, middlewareAppMentioned)
 
 	socketmodeHandler.RunEventLoop()
 }

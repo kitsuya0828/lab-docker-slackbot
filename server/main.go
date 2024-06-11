@@ -96,6 +96,42 @@ func (s *server) GetDockerStat(ctx context.Context, in *pb.GetDockerStatRequest)
 	}, nil
 }
 
+func (s *server) GetReccomendation(ctx context.Context, in *pb.GetReccomendationRequest) (*pb.GetReccomendationResponse, error) {
+	cli, err := docker.NewClient()
+	if err != nil {
+		return nil, err
+	}
+	defer cli.Close()
+
+	rec, err := docker.GetReccomendation(context.Background(), cli)
+	if err != nil {
+		return nil, err
+	}
+
+	reccomendedImages := make([]*pb.ReccomendationItem, 0)
+	for _, image := range rec.Images {
+		reccomendedImages = append(reccomendedImages, &pb.ReccomendationItem{
+			Id:   image.Id,
+			User: image.User,
+			Name: image.Name,
+			Size: uint64(image.Size),
+		})
+	}
+	reccomendedContainers := make([]*pb.ReccomendationItem, 0)
+	for _, container := range rec.Containers {
+		reccomendedContainers = append(reccomendedContainers, &pb.ReccomendationItem{
+			Id:   container.Id,
+			User: container.User,
+			Name: container.Name,
+			Size: uint64(container.Size),
+		})
+	}
+	return &pb.GetReccomendationResponse{
+		Images:     reccomendedImages,
+		Containers: reccomendedContainers,
+	}, nil
+}
+
 func main() {
 	flag.Parse()
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
