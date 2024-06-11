@@ -2,8 +2,5 @@
 .DS_Store
 
 client/config.yaml
-<<<<<<< Updated upstream
-=======
 
 dist/
->>>>>>> Stashed changes
