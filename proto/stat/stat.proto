@@ -40,7 +40,23 @@ message GetFsStatResponse {
 	string path = 3;
 }
 
+message ReccomendationItem {
+	string id = 1;
+	string name = 2;
+	string user = 3;
+	uint64 size = 4;
+}
+
+message GetReccomendationRequest {
+}
+
+message GetReccomendationResponse {
+	repeated ReccomendationItem images = 1;
+	repeated ReccomendationItem containers = 2;
+}
+
 service StatService {
 	rpc GetDockerStat(GetDockerStatRequest) returns (GetDockerStatResponse);
 	rpc GetFsStat(GetFsStatRequest) returns (GetFsStatResponse);
+	rpc GetReccomendation(GetReccomendationRequest) returns (GetReccomendationResponse);
 }

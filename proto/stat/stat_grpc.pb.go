@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type StatServiceClient interface {
 	GetDockerStat(ctx context.Context, in *GetDockerStatRequest, opts ...grpc.CallOption) (*GetDockerStatResponse, error)
 	GetFsStat(ctx context.Context, in *GetFsStatRequest, opts ...grpc.CallOption) (*GetFsStatResponse, error)
+	GetReccomendation(ctx context.Context, in *GetReccomendationRequest, opts ...grpc.CallOption) (*GetReccomendationResponse, error)
 }
 
 type statServiceClient struct {
@@ -52,12 +53,22 @@ func (c *statServiceClient) GetFsStat(ctx context.Context, in *GetFsStatRequest,
 	return out, nil
 }
 
+func (c *statServiceClient) GetReccomendation(ctx context.Context, in *GetReccomendationRequest, opts ...grpc.CallOption) (*GetReccomendationResponse, error) {
+	out := new(GetReccomendationResponse)
+	err := c.cc.Invoke(ctx, "/stat.StatService/GetReccomendation", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // StatServiceServer is the server API for StatService service.
 // All implementations must embed UnimplementedStatServiceServer
 // for forward compatibility
 type StatServiceServer interface {
 	GetDockerStat(context.Context, *GetDockerStatRequest) (*GetDockerStatResponse, error)
 	GetFsStat(context.Context, *GetFsStatRequest) (*GetFsStatResponse, error)
+	GetReccomendation(context.Context, *GetReccomendationRequest) (*GetReccomendationResponse, error)
 	mustEmbedUnimplementedStatServiceServer()
 }
 
@@ -70,6 +81,9 @@ func (UnimplementedStatServiceServer) GetDockerStat(context.Context, *GetDockerS
 }
 func (UnimplementedStatServiceServer) GetFsStat(context.Context, *GetFsStatRequest) (*GetFsStatResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFsStat not implemented")
+}
+func (UnimplementedStatServiceServer) GetReccomendation(context.Context, *GetReccomendationRequest) (*GetReccomendationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetReccomendation not implemented")
 }
 func (UnimplementedStatServiceServer) mustEmbedUnimplementedStatServiceServer() {}
 
@@ -120,6 +134,24 @@ func _StatService_GetFsStat_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StatService_GetReccomendation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReccomendationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StatServiceServer).GetReccomendation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/stat.StatService/GetReccomendation",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StatServiceServer).GetReccomendation(ctx, req.(*GetReccomendationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // StatService_ServiceDesc is the grpc.ServiceDesc for StatService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -134,6 +166,10 @@ var StatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetFsStat",
 			Handler:    _StatService_GetFsStat_Handler,
+		},
+		{
+			MethodName: "GetReccomendation",
+			Handler:    _StatService_GetReccomendation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

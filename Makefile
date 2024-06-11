@@ -8,5 +8,4 @@ compile:
 		--proto_path=.
 
 build:
-	GOOS=linux GOARCH=amd64 go build -o bin/server server/main.go
-	GOOS=linux GOARCH=amd64 go build -o bin/client client/*.go
+	goreleaser --snapshot --skip-publish --rm-dist
