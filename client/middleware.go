@@ -31,6 +31,7 @@ func getUserName(evt *socketmode.Event) (string, error) {
 }
 
 func middlewareAppHomeOpened(evt *socketmode.Event, clt *socketmode.Client) {
+	clt.Ack(*evt.Request)
 	user, err := getUserName(evt)
 	if err != nil {
 		slog.Error("failed to get user name", "error", err)
@@ -83,6 +84,7 @@ func middlewareAppHomeOpened(evt *socketmode.Event, clt *socketmode.Client) {
 }
 
 func middlewareAppMentioned(evt *socketmode.Event, clt *socketmode.Client) {
+	clt.Ack(*evt.Request)
 	apiEvt, ok := evt.Data.(slackevents.EventsAPIEvent)
 	if !ok {
 		slog.Error("failed to convert socketmode.Event to slackevents.EventsAPIEvent")
