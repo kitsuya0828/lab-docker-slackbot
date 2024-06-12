@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"os"
 
-	drivers "github.com/Kitsuya0828/lab-docker-slackbot/driver"
 	"gopkg.in/yaml.v3"
 
+	"github.com/Kitsuya0828/lab-docker-slackbot/client/slack"
 	"github.com/joho/godotenv"
 	"github.com/slack-go/slack/slackevents"
 	"github.com/slack-go/slack/socketmode"
@@ -44,7 +44,7 @@ func main() {
 		slog.Error("failed to unmarshal yaml", "error", err)
 	}
 
-	client, err := drivers.ConnectToSlackViaSocketmode()
+	client, err := slack.ConnectToSlackViaSocketmode()
 	if err != nil {
 		slog.Error("failed to connect to slack", "error", err)
 		os.Exit(1)
