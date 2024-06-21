@@ -1,4 +1,4 @@
-package main
+package middleware
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/Kitsuya0828/lab-docker-slackbot/client/config"
+	"github.com/Kitsuya0828/lab-docker-slackbot/client/view"
 	pb "github.com/Kitsuya0828/lab-docker-slackbot/proto/stat"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
@@ -30,7 +32,7 @@ func getUserName(evt *socketmode.Event) (string, error) {
 	return user, nil
 }
 
-func middlewareAppHomeOpened(evt *socketmode.Event, clt *socketmode.Client) {
+func AppHomeOpened(evt *socketmode.Event, clt *socketmode.Client) {
 	clt.Ack(*evt.Request)
 	user, err := getUserName(evt)
 	if err != nil {
@@ -46,12 +48,12 @@ func middlewareAppHomeOpened(evt *socketmode.Event, clt *socketmode.Client) {
 	mu := sync.Mutex{}
 
 	wg := sync.WaitGroup{}
-	for _, host := range cfg.Hosts {
+	for _, host := range config.Cfg.Hosts {
 		wg.Add(1)
-		go func(ctx context.Context, host Host) {
+		target := fmt.Sprintf("%s:%s", host.Address, host.Port)
+		go func(ctx context.Context, target string) {
 			defer wg.Done()
 
-			target := fmt.Sprintf("%s:%s", host.Address, host.Port)
 			conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				slog.Error("failed to connect to grpc server", "error", err, "target", target)
@@ -73,17 +75,17 @@ func middlewareAppHomeOpened(evt *socketmode.Event, clt *socketmode.Client) {
 			dockerStats = append(dockerStats, ds.DockerStat)
 			hostnames = append(hostnames, fs.Hostname)
 			mu.Unlock()
-		}(ctx, host)
+		}(ctx, target)
 	}
 	wg.Wait()
 
-	v := HomeTabView(hostnames, fsStats, dockerStats)
+	v := view.HomeTabView(hostnames, fsStats, dockerStats)
 	if _, err := clt.PublishView(user, v, ""); err != nil {
 		slog.Error("failed to publish home tab view", "error", err)
 	}
 }
 
-func middlewareAppMentioned(evt *socketmode.Event, clt *socketmode.Client) {
+func AppMention(evt *socketmode.Event, clt *socketmode.Client) {
 	clt.Ack(*evt.Request)
 	apiEvt, ok := evt.Data.(slackevents.EventsAPIEvent)
 	if !ok {
@@ -102,16 +104,16 @@ func middlewareAppMentioned(evt *socketmode.Event, clt *socketmode.Client) {
 	slog.Info("app mentioned", "user", user)
 
 	mu := sync.Mutex{}
-	results := []string{}
+	results := []*pb.GetReccomendationResponse{}
 	ctx := context.Background()
 
 	wg := sync.WaitGroup{}
-	for _, host := range cfg.Hosts {
+	for _, host := range config.Cfg.Hosts {
 		wg.Add(1)
-		go func(ctx context.Context, host Host) {
+		target := fmt.Sprintf("%s:%s", host.Address, host.Port)
+		go func(ctx context.Context, target string) {
 			defer wg.Done()
 
-			target := fmt.Sprintf("%s:%s", host.Address, host.Port)
 			conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				slog.Error("failed to connect to grpc server", "error", err, "target", target)
@@ -127,13 +129,13 @@ func middlewareAppMentioned(evt *socketmode.Event, clt *socketmode.Client) {
 			}
 
 			mu.Lock()
-			results = append(results, fmt.Sprintf("%v: images=%v, containers=%v", host, resp.Images, resp.Containers))
+			results = append(results, resp)
 			mu.Unlock()
-		}(ctx, host)
+		}(ctx, target)
 	}
 	wg.Wait()
 
-	msg := fmt.Sprintf("<@%s> %s", user, results)
+	msg := fmt.Sprintf("<@%s> %v", user, results)
 	_, _, err := clt.PostMessage(channel, slack.MsgOptionText(msg, false))
 	if err != nil {
 		slog.Error("failed to post message", "error", err, "channel", channel, "message", msg)
