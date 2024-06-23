@@ -6,33 +6,24 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Kitsuya0828/lab-docker-slackbot/client/config"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/socketmode"
 )
 
-func ConnectToSlackViaSocketmode() (*socketmode.Client, error) {
-	appToken := os.Getenv("SLACK_APP_TOKEN")
-	if appToken == "" {
-		return nil, errors.New("SLACK_APP_TOKEN must be set")
-	}
-
-	if !strings.HasPrefix(appToken, "xapp-") {
+func NewSocketmodeClient() (*socketmode.Client, error) {
+	if !strings.HasPrefix(config.Cfg.AppToken, "xapp-") {
 		return nil, errors.New("SLACK_APP_TOKEN must have the prefix \"xapp-\"")
 	}
 
-	botToken := os.Getenv("SLACK_BOT_TOKEN")
-	if botToken == "" {
-		return nil, errors.New("SLACK_BOT_TOKEN must be set")
-	}
-
-	if !strings.HasPrefix(botToken, "xoxb-") {
+	if !strings.HasPrefix(config.Cfg.BotToken, "xoxb-") {
 		return nil, errors.New("SLACK_BOT_TOKEN must have the prefix \"xoxb-\"")
 	}
 
 	api := slack.New(
-		botToken,
+		config.Cfg.BotToken,
 		slack.OptionDebug(true),
-		slack.OptionAppLevelToken(appToken),
+		slack.OptionAppLevelToken(config.Cfg.AppToken),
 		slack.OptionLog(log.New(os.Stdout, "api: ", log.Lshortfile|log.LstdFlags)),
 	)
 
